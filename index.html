@@ -498,7 +498,7 @@ select, input[type=range] {
     <label>Haptic Feedback</label>
     <input type="checkbox" id="haptic" checked>
   </div>
-  <p style="margin-top:20px;font-size:0.85rem;color:#888;text-align:center;">IceCream Cam v1.0 • Made with 🍦 for sweet memories</p>
+  <p style="margin-top:20px;font-size:0.85rem;color:#888;text-align:center;">IceCream Cam v1.1 • Made with 🍦 for sweet memories</p>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -548,23 +548,63 @@ function haptic() {
 
 async function startCamera() {
   try {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    const constraints = {
-      video: {
-        facingMode,
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+    
+    // Progressive fallback constraints - more reliable across devices & WebViews
+    const attempts = [
+      // Best quality
+      {
+        video: { facingMode: { exact: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: currentMode === 'video'
       },
-      audio: currentMode === 'video'
-    };
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Medium
+      {
+        video: { facingMode, width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: currentMode === 'video'
+      },
+      // Basic video only (no audio first)
+      {
+        video: { facingMode },
+        audio: false
+      },
+      // Absolute fallback
+      {
+        video: true,
+        audio: false
+      }
+    ];
+
+    let lastError = null;
+    for (const constraints of attempts) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        break;
+      } catch (err) {
+        lastError = err;
+        console.warn('Constraint failed, trying next:', err.message);
+        continue;
+      }
+    }
+
+    if (!stream) {
+      throw lastError || new Error('Unable to access camera');
+    }
+
     video.srcObject = stream;
+    video.playsInline = true;
+    video.muted = true;
+    await video.play().catch(() => {});
+    
     video.style.transform = (facingMode === 'user' && $('mirror')?.checked) ? 'scaleX(-1)' : 'scaleX(1)';
     loading.classList.add('hide');
     applyZoom();
     toast('Camera ready! 🍦');
   } catch (e) {
-    loading.innerHTML = `<div style="text-align:center;padding:20px;"><p>Camera access needed 🍦</p><p style="font-size:0.9rem;margin-top:8px;color:#666;">${e.message}</p><button onclick="startCamera()" style="margin-top:16px;background:var(--pink);color:white;border:none;padding:10px 20px;border-radius:12px;font-weight:700;">Retry</button></div>`;
+    console.error('Camera error:', e);
+    loading.innerHTML = `<div style="text-align:center;padding:20px;"><p>Camera access needed 🍦</p><p style="font-size:0.9rem;margin-top:8px;color:#666;">${e.message || 'Permission denied or no camera'}</p><button onclick="startCamera()" style="margin-top:16px;background:var(--pink);color:white;border:none;padding:10px 20px;border-radius:12px;font-weight:700;">Retry</button></div>`;
   }
 }
 
@@ -804,3 +844,4 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 </script>
 </body>
 </html>
+

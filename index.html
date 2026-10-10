@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#FF6B9D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="IceCream Cam">
+<title>🍦 IceCream Cam</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍦</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root {
+  --pink: #FF6B9D;
+  --hot-pink: #FF2E7E;
+  --cream: #FFF8F0;
+  --vanilla: #FFF5E6;
+  --mint: #7BE0C8;
+  --chocolate: #C9956B;
+  --strawberry: #FF8FAB;
+  --blueberry: #A78BFA;
+  --shadow: 0 8px 32px rgba(255,107,157,0.25);
+  --radius: 28px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(160deg, #FFF8F0 0%, #FFE4F0 40%, #F0F9FF 100%);
+  color: #2D1B2E;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+  background: #fff;
+  box-shadow: 0 0 60px rgba(255,107,157,0.15);
+  border-radius: 0;
+  overflow: hidden;
+}
+@media (min-width: 500px) {
+  body { align-items: center; justify-content: center; }
+  .app { height: 92dvh; border-radius: 36px; margin: 20px; border: 3px solid #fff; }
+}
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.7));
+  backdrop-filter: blur(12px);
+  z-index: 10;
+}
+.logo {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 1.45rem;
+  background: linear-gradient(135deg, var(--pink), var(--hot-pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.logo span { font-size: 1.6rem; }
+.header-actions { display: flex; gap: 8px; }
+.icon-btn {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #fff, #FFF0F5);
+  box-shadow: 0 4px 12px rgba(255,107,157,0.2);
+  color: var(--pink);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+}
+.icon-btn:hover, .icon-btn:active { transform: scale(1.12); background: var(--pink); color: white; }
+/* Viewport */
+.viewport {
+  flex: 1;
+  position: relative;
+  background: #111;
+  overflow: hidden;
+  border-radius: 24px 24px 0 0;
+  margin: 0 8px;
+}
+video, canvas {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  position: absolute;
+  top: 0; left: 0;
+}
+#preview { display: none; }
+#preview.show { display: block; }
+.overlay-grid {
+  position: absolute; inset: 0;
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px);
+  background-size: 33.33% 33.33%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.overlay-grid.show { opacity: 1; }
+.flash-indicator {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  backdrop-filter: blur(8px);
+  display: none;
+}
+.flash-indicator.show { display: flex; align-items: center; gap: 4px; }
+/* Modes bar */
+.modes {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px 6px;
+  background: linear-gradient(180deg, transparent, rgba(255,248,240,0.9));
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.modes::-webkit-scrollbar { display: none; }
+.mode-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: none;
+  background: transparent;
+  color: #888;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s;
+}
+.mode-btn.active {
+  background: linear-gradient(135deg, var(--pink), var(--hot-pink));
+  color: white;
+  box-shadow: 0 4px 14px rgba(255,107,157,0.4);
+  transform: scale(1.05);
+}
+/* Controls */
+.controls {
+  padding: 8px 16px 20px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), #fff);
+  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.shutter-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+.shutter {
+  width: 78px; height: 78px;
+  border-radius: 50%;
+  border: 5px solid white;
+  background: linear-gradient(135deg, var(--pink), var(--hot-pink));
+  box-shadow: 0 0 0 4px rgba(255,107,157,0.3), var(--shadow);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s cubic-bezier(0.34,1.56,0.64,1);
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  font-size: 1.8rem;
+}
+.shutter:active { transform: scale(0.88); }
+.shutter.recording {
+  background: #FF3B30;
+  animation: pulse 1.2s infinite;
+}
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 4px rgba(255,59,48,0.3); }
+  50% { box-shadow: 0 0 0 12px rgba(255,59,48,0.1); }
+}
+.side-btn {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #fff, #FFF5F8);
+  box-shadow: 0 4px 16px rgba(255,107,157,0.2);
+  color: var(--pink);
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.side-btn:hover, .side-btn:active { transform: scale(1.1) rotate(8deg); background: var(--pink); color: white; }
+/* Filters strip */
+.filters {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  scrollbar-width: none;
+}
+.filters::-webkit-scrollbar { display: none; }
+.filter-item {
+  flex: 0 0 auto;
+  width: 58px;
+  text-align: center;
+  cursor: pointer;
+}
+.filter-preview {
+  width: 52px; height: 52px;
+  border-radius: 16px;
+  margin: 0 auto 4px;
+  border: 3px solid transparent;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.2s;
+}
+.filter-item.active .filter-preview {
+  border-color: var(--pink);
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(255,107,157,0.4);
+}
+.filter-preview img, .filter-preview div {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.filter-name {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #666;
+}
+/* Gallery modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(45,27,46,0.6);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal.show { display: flex; }
+.modal-content {
+  background: #fff;
+  width: 100%;
+  max-width: 480px;
+  max-height: 85dvh;
+  border-radius: 32px 32px 0 0;
+  padding: 20px;
+  overflow-y: auto;
+  animation: slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.modal-header h2 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.5rem;
+  color: var(--pink);
+}
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.gallery-item {
+  aspect-ratio: 1;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  background: #f5f5f5;
+  cursor: pointer;
+}
+.gallery-item img, .gallery-item video {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.gallery-item .delete {
+  position: absolute;
+  top: 4px; right: 4px;
+  background: rgba(255,59,48,0.9);
+  color: white;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: none;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+/* Settings & other panels */
+.panel {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.97);
+  backdrop-filter: blur(20px);
+  z-index: 50;
+  display: none;
+  flex-direction: column;
+  padding: 20px;
+  border-radius: 24px 24px 0 0;
+}
+.panel.show { display: flex; }
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid #f0e0e8;
+}
+.settings-item label { font-weight: 600; }
+select, input[type=range] {
+  accent-color: var(--pink);
+}
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: linear-gradient(135deg, var(--pink), var(--hot-pink));
+  color: white;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s;
+  z-index: 200;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* Loading */
+.loading {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, #FFF8F0, #FFE4F0);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  color: var(--pink);
+}
+.loading.hide { display: none; }
+.scoop {
+  font-size: 4rem;
+  animation: bounce 1s infinite alternate;
+}
+@keyframes bounce {
+  from { transform: translateY(0) rotate(-8deg); }
+  to { transform: translateY(-12px) rotate(8deg); }
+}
+/* Install banner */
+.install-banner {
+  position: absolute;
+  bottom: 90px;
+  left: 12px; right: 12px;
+  background: linear-gradient(135deg, #fff, #FFF0F5);
+  border: 2px solid var(--pink);
+  border-radius: 20px;
+  padding: 12px 16px;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow);
+  z-index: 40;
+  font-size: 0.85rem;
+}
+.install-banner.show { display: flex; }
+.install-banner button {
+  background: var(--pink);
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo"><span>🍦</span> IceCream Cam</div>
+    <div class="header-actions">
+      <button class="icon-btn" id="gridBtn" title="Grid"><i class="fa-solid fa-border-all"></i></button>
+      <button class="icon-btn" id="timerBtn" title="Timer"><i class="fa-solid fa-clock"></i></button>
+      <button class="icon-btn" id="settingsBtn" title="Settings"><i class="fa-solid fa-gear"></i></button>
+      <button class="icon-btn" id="galleryBtn" title="Gallery"><i class="fa-solid fa-images"></i></button>
+    </div>
+  </div>
+
+  <div class="viewport" id="viewport">
+    <div class="loading" id="loading">
+      <div class="scoop">🍦</div>
+      <p style="margin-top:12px;font-weight:600;">Scooping your camera...</p>
+    </div>
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <img id="preview" alt="preview">
+    <div class="overlay-grid" id="grid"></div>
+    <div class="flash-indicator" id="flashInd"><i class="fa-solid fa-bolt"></i> <span id="flashText">Auto</span></div>
+    <div class="install-banner" id="installBanner">
+      <span>Install IceCream Cam for the full scoop experience! 🍦</span>
+      <button id="installBtn">Install</button>
+    </div>
+  </div>
+
+  <div class="modes" id="modes">
+    <button class="mode-btn" data-mode="photo">Photo</button>
+    <button class="mode-btn active" data-mode="video">Video</button>
+    <button class="mode-btn" data-mode="portrait">Portrait</button>
+    <button class="mode-btn" data-mode="square">Square</button>
+    <button class="mode-btn" data-mode="panorama">Panorama</button>
+  </div>
+
+  <div class="controls">
+    <div class="filters" id="filters"></div>
+    <div class="control-row">
+      <button class="side-btn" id="flashBtn" title="Flash"><i class="fa-solid fa-bolt"></i></button>
+      <div class="shutter-wrap">
+        <button class="shutter" id="shutter"><i class="fa-solid fa-camera"></i></button>
+      </div>
+      <button class="side-btn" id="switchBtn" title="Switch Camera"><i class="fa-solid fa-arrows-rotate"></i></button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:0 8px;">
+      <i class="fa-solid fa-magnifying-glass-minus" style="color:var(--pink);font-size:0.9rem;"></i>
+      <input type="range" id="zoom" min="1" max="5" step="0.1" value="1" style="flex:1;">
+      <i class="fa-solid fa-magnifying-glass-plus" style="color:var(--pink);font-size:0.9rem;"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Gallery Modal -->
+<div class="modal" id="galleryModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>🍦 My Scoops</h2>
+      <button class="icon-btn" id="closeGallery"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="gallery-grid" id="galleryGrid"></div>
+    <p id="emptyGallery" style="text-align:center;color:#999;padding:40px 0;display:none;">No scoops yet! Take some photos 🍦</p>
+  </div>
+</div>
+
+<!-- Settings Panel -->
+<div class="panel" id="settingsPanel">
+  <div class="modal-header">
+    <h2>Settings</h2>
+    <button class="icon-btn" id="closeSettings"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="settings-item">
+    <label>Photo Quality</label>
+    <select id="quality">
+      <option value="0.92">High</option>
+      <option value="0.8" selected>Medium</option>
+      <option value="0.6">Low</option>
+    </select>
+  </div>
+  <div class="settings-item">
+    <label>Mirror Front Camera</label>
+    <input type="checkbox" id="mirror" checked>
+  </div>
+  <div class="settings-item">
+    <label>Save to Gallery Auto</label>
+    <input type="checkbox" id="autoSave" checked>
+  </div>
+  <div class="settings-item">
+    <label>Haptic Feedback</label>
+    <input type="checkbox" id="haptic" checked>
+  </div>
+  <p style="margin-top:20px;font-size:0.85rem;color:#888;text-align:center;">IceCream Cam v1.0 • Made with 🍦 for sweet memories</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const video = $('video');
+const canvas = $('canvas');
+const ctx = canvas.getContext('2d');
+const preview = $('preview');
+const shutter = $('shutter');
+const loading = $('loading');
+let stream = null;
+let facingMode = 'user';
+let currentMode = 'video';
+let isRecording = false;
+let mediaRecorder = null;
+let recordedChunks = [];
+let flashMode = 'auto'; // auto, on, off
+let timerSeconds = 0;
+let zoomLevel = 1;
+let deferredPrompt = null;
+let gallery = JSON.parse(localStorage.getItem('icecream_gallery') || '[]');
+
+const FILTERS = [
+  { name: 'None', css: 'none' },
+  { name: 'Strawberry', css: 'saturate(1.4) hue-rotate(-10deg) brightness(1.05)' },
+  { name: 'Chocolate', css: 'sepia(0.6) saturate(1.2) contrast(1.1)' },
+  { name: 'Mint', css: 'hue-rotate(90deg) saturate(1.3) brightness(1.05)' },
+  { name: 'Vanilla', css: 'brightness(1.15) contrast(0.95) saturate(0.9)' },
+  { name: 'Blueberry', css: 'hue-rotate(200deg) saturate(1.4)' },
+  { name: 'Caramel', css: 'sepia(0.4) brightness(1.1) contrast(1.05)' },
+  { name: 'Rainbow', css: 'saturate(1.8) contrast(1.1)' },
+];
+let activeFilter = 0;
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function haptic() {
+  if ($('haptic')?.checked && navigator.vibrate) navigator.vibrate(30);
+}
+
+async function startCamera() {
+  try {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    const constraints = {
+      video: {
+        facingMode,
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+      audio: currentMode === 'video'
+    };
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = stream;
+    video.style.transform = (facingMode === 'user' && $('mirror')?.checked) ? 'scaleX(-1)' : 'scaleX(1)';
+    loading.classList.add('hide');
+    applyZoom();
+    toast('Camera ready! 🍦');
+  } catch (e) {
+    loading.innerHTML = `<div style="text-align:center;padding:20px;"><p>Camera access needed 🍦</p><p style="font-size:0.9rem;margin-top:8px;color:#666;">${e.message}</p><button onclick="startCamera()" style="margin-top:16px;background:var(--pink);color:white;border:none;padding:10px 20px;border-radius:12px;font-weight:700;">Retry</button></div>`;
+  }
+}
+
+function applyZoom() {
+  video.style.transform = `${facingMode === 'user' && $('mirror')?.checked ? 'scaleX(-1)' : ''} scale(${zoomLevel})`;
+}
+
+function applyFilter() {
+  const f = FILTERS[activeFilter];
+  video.style.filter = f.css === 'none' ? '' : f.css;
+  preview.style.filter = f.css === 'none' ? '' : f.css;
+}
+
+function buildFilters() {
+  const container = $('filters');
+  container.innerHTML = FILTERS.map((f, i) => `
+    <div class="filter-item ${i===0?'active':''}" data-i="${i}">
+      <div class="filter-preview" style="background:linear-gradient(135deg,#ff9ec4,#ff6b9d);filter:${f.css==='none'?'':'${f.css}'}"></div>
+      <div class="filter-name">${f.name}</div>
+    </div>
+  `).join('');
+  container.querySelectorAll('.filter-item').forEach(el => {
+    el.onclick = () => {
+      container.querySelectorAll('.filter-item').forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      activeFilter = +el.dataset.i;
+      applyFilter();
+      haptic();
+    };
+  });
+}
+
+async function capturePhoto() {
+  haptic();
+  const doCapture = async () => {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.save();
+    if (facingMode === 'user' && $('mirror')?.checked) {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.filter = FILTERS[activeFilter].css === 'none' ? 'none' : FILTERS[activeFilter].css;
+    ctx.drawImage(video, 0, 0);
+    ctx.restore();
+    const quality = parseFloat($('quality').value);
+    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    if ($('autoSave').checked) {
+      gallery.unshift({ type: 'image', data: dataUrl, date: Date.now() });
+      localStorage.setItem('icecream_gallery', JSON.stringify(gallery.slice(0, 50)));
+    }
+    preview.src = dataUrl;
+    preview.classList.add('show');
+    setTimeout(() => preview.classList.remove('show'), 800);
+    toast('Scoop captured! 🍦');
+    // Flash effect
+    const flash = document.createElement('div');
+    flash.style.cssText = 'position:absolute;inset:0;background:white;opacity:0.8;z-index:20;pointer-events:none;';
+    $('viewport').appendChild(flash);
+    setTimeout(() => flash.remove(), 120);
+  };
+
+  if (timerSeconds > 0) {
+    toast(`Timer: ${timerSeconds}s`);
+    for (let i = timerSeconds; i > 0; i--) {
+      toast(i);
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+  await doCapture();
+}
+
+async function toggleVideo() {
+  if (!isRecording) {
+    recordedChunks = [];
+    const options = { mimeType: 'video/webm;codecs=vp9' };
+    if (!MediaRecorder.isTypeSupported(options.mimeType)) options.mimeType = 'video/webm';
+    mediaRecorder = new MediaRecorder(stream, options);
+    mediaRecorder.ondataavailable = e => { if (e.data.size) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      if ($('autoSave').checked) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          gallery.unshift({ type: 'video', data: reader.result, date: Date.now() });
+          localStorage.setItem('icecream_gallery', JSON.stringify(gallery.slice(0, 30)));
+        };
+        reader.readAsDataURL(blob);
+      }
+      toast('Video scooped! 🎬');
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    shutter.classList.add('recording');
+    shutter.innerHTML = '<i class="fa-solid fa-stop"></i>';
+    toast('Recording...');
+  } else {
+    mediaRecorder.stop();
+    isRecording = false;
+    shutter.classList.remove('recording');
+    shutter.innerHTML = '<i class="fa-solid fa-camera"></i>';
+  }
+  haptic();
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  shutter.innerHTML = mode === 'video' ? '<i class="fa-solid fa-video"></i>' : '<i class="fa-solid fa-camera"></i>';
+  if (mode === 'video' && stream) {
+    // restart with audio if needed
+  }
+  toast(mode.charAt(0).toUpperCase() + mode.slice(1) + ' mode');
+  haptic();
+}
+
+function cycleFlash() {
+  const modes = ['auto', 'on', 'off'];
+  flashMode = modes[(modes.indexOf(flashMode) + 1) % 3];
+  $('flashText').textContent = flashMode.charAt(0).toUpperCase() + flashMode.slice(1);
+  $('flashInd').classList.add('show');
+  setTimeout(() => $('flashInd').classList.remove('show'), 1500);
+  // Torch if supported
+  const track = stream?.getVideoTracks()[0];
+  if (track && track.getCapabilities().torch) {
+    track.applyConstraints({ advanced: [{ torch: flashMode === 'on' }] }).catch(()=>{});
+  }
+  toast('Flash: ' + flashMode);
+  haptic();
+}
+
+function openGallery() {
+  const grid = $('galleryGrid');
+  const empty = $('emptyGallery');
+  if (!gallery.length) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    grid.innerHTML = gallery.map((item, i) => `
+      <div class="gallery-item">
+        ${item.type === 'image' 
+          ? `<img src="${item.data}" alt="">` 
+          : `<video src="${item.data}" muted></video>`}
+        <button class="delete" data-i="${i}">×</button>
+      </div>
+    `).join('');
+    grid.querySelectorAll('.delete').forEach(btn => {
+      btn.onclick = e => {
+        e.stopPropagation();
+        gallery.splice(+btn.dataset.i, 1);
+        localStorage.setItem('icecream_gallery', JSON.stringify(gallery));
+        openGallery();
+        haptic();
+      };
+    });
+  }
+  $('galleryModal').classList.add('show');
+}
+
+// Event listeners
+shutter.onclick = () => {
+  if (currentMode === 'video') toggleVideo();
+  else capturePhoto();
+};
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.onclick = () => setMode(btn.dataset.mode);
+});
+
+$('switchBtn').onclick = async () => {
+  facingMode = facingMode === 'user' ? 'environment' : 'user';
+  await startCamera();
+  haptic();
+};
+
+$('flashBtn').onclick = cycleFlash;
+
+$('zoom').oninput = e => {
+  zoomLevel = parseFloat(e.target.value);
+  applyZoom();
+};
+
+$('gridBtn').onclick = () => {
+  $('grid').classList.toggle('show');
+  haptic();
+};
+
+$('timerBtn').onclick = () => {
+  timerSeconds = timerSeconds === 0 ? 3 : timerSeconds === 3 ? 10 : 0;
+  toast(timerSeconds ? `Timer ${timerSeconds}s` : 'Timer off');
+  haptic();
+};
+
+$('galleryBtn').onclick = openGallery;
+$('closeGallery').onclick = () => $('galleryModal').classList.remove('show');
+
+$('settingsBtn').onclick = () => $('settingsPanel').classList.add('show');
+$('closeSettings').onclick = () => $('settingsPanel').classList.remove('show');
+
+// PWA Install
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  $('installBanner').classList.add('show');
+});
+$('installBtn').onclick = async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') toast('Installed! 🍦');
+    deferredPrompt = null;
+    $('installBanner').classList.remove('show');
+  }
+};
+
+// Portrait mode simple effect
+function updatePortrait() {
+  if (currentMode === 'portrait') {
+    video.style.filter = (FILTERS[activeFilter].css === 'none' ? '' : FILTERS[activeFilter].css + ' ') + 'blur(0px)';
+    // Simple center sharp simulation via canvas later if needed
+  }
+}
+
+// Init
+buildFilters();
+startCamera();
+
+// Service worker registration
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// Prevent zoom on double tap etc.
+document.addEventListener('gesturestart', e => e.preventDefault());
+</script>
+</body>
+</html>
